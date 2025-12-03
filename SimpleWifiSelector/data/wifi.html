@@ -1,0 +1,27 @@
+<!doctype html5>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>ESP32 WiFi Config</title>
+        <link rel="stylesheet" href="/style.css">
+    </head>
+    <body>
+        <h2>ESP32 WiFi Configuration</h2>
+        <div id="status" class="small">Loading...</div>
+
+        <h3>Available Networks</h3>
+        <div id="networks">Click "Scan" to start scanning</div>
+        <p><button id="scanBtn" class="btn">Scan</button></p>
+
+        <h3>Manual / Selected</h3>
+        <form id="cfg">
+            <label>SSID</label><input id="ssid" name="ssid" placeholder="SSID" required />
+            <label>Password</label><input id="pass" name="pass" placeholder="Password" />
+            <p><button type="submit" class="btn">Save & Connect</button></p>
+        </form>
+
+        <div id="after" style="margin-top:12px"></div>
+        <script src="/app.js"></script>
+    </body>
+</html>
