@@ -8,6 +8,7 @@ This project implements a robust and modern WiFi Manager for the ESP32 using asy
 *   **Dual Mode**: The ESP32 operates in Access Point (AP) mode for configuration while simultaneously acting as a Station (STA) to connect to your home network.
 *   **Auto-Scan**: Automatically scans for available WiFi networks upon opening the setup page.
 *   **Non-Blocking**: Utilizes asynchronous scanning and connection handling to ensure the web server remains responsive and prevents Watchdog Timer (WDT) crashes.
+*   **Persistent Credentials**: WiFi SSID and password are automatically saved to ESP32's NVS (Non-Volatile Storage) using the Preferences library. The device will automatically reconnect to the saved network on power-up or after unplugging.
 
 ### 2. **Modern Web Interface**
 *   **Aesthetics**: Features a premium dark theme with **Glassmorphism** effects (blur, transparency), smooth animations, and a polished color palette.

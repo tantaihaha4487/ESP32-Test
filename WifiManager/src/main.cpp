@@ -4,9 +4,11 @@
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
+Preferences preferences;
 
 // Built-in LED pin (usually 2 for ESP32 DevKit V1)
 const int LED_PIN = 2;
@@ -47,6 +49,9 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
 
+    // Initialize Preferences
+    preferences.begin("wifi-conf", false);
+
     // Set WiFi to AP+STA mode
     WiFi.mode(WIFI_AP_STA);
     
@@ -57,6 +62,15 @@ void setup() {
     IPAddress IP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
     Serial.println(IP);
+
+    // Load saved credentials
+    ssid = preferences.getString("ssid", "");
+    password = preferences.getString("password", "");
+
+    if (ssid != "") {
+        Serial.println("Found saved credentials. Connecting to: " + ssid);
+        WiFi.begin(ssid.c_str(), password.c_str());
+    }
 
     // Route for root /
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -108,6 +122,10 @@ void setup() {
         }
 
         Serial.println("Connecting to: " + inputSSID);
+        
+        // Save credentials
+        preferences.putString("ssid", inputSSID);
+        preferences.putString("password", inputPassword);
         
         WiFi.begin(inputSSID.c_str(), inputPassword.c_str());
         request->send(200, "application/json", "{\"status\":\"attempting\"}");
