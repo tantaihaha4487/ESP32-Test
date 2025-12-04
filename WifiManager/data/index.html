@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Control</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Device Control</h1>
+
+            <div class="led-control">
+                <div class="led-status">Built-in LED</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="led-toggle" onchange="toggleLed()">
+                    <span class="slider"></span>
+                </label>
+                <p id="state-text" style="color: #94a3b8; font-size: 0.9em;">OFF</p>
+            </div>
+
+            <div style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                <p style="font-size: 0.8em; color: #64748b; text-align: center;">Connected to WiFi</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get initial state
+        window.onload = function () {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    const toggle = document.getElementById('led-toggle');
+                    toggle.checked = data.led;
+                    updateText(data.led);
+                });
+        };
+
+        function toggleLed() {
+            const toggle = document.getElementById('led-toggle');
+            const state = toggle.checked ? 'on' : 'off';
+
+            fetch('/toggle?state=' + state)
+                .then(response => response.json())
+                .then(data => {
+                    updateText(data.led);
+                    // Sync in case of error/mismatch
+                    toggle.checked = data.led;
+                });
+        }
+
+        function updateText(isOn) {
+            const text = document.getElementById('state-text');
+            text.textContent = isOn ? 'ON' : 'OFF';
+            text.style.color = isOn ? 'var(--accent-color)' : '#94a3b8';
+        }
+    </script>
+</body>
+
+</html>

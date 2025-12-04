@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Setup</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>WiFi Setup</h1>
+
+            <div id="scan-status">
+                <div class="spinner"></div>
+                <p style="text-align: center; color: #94a3b8;">Scanning for networks...</p>
+            </div>
+
+            <ul id="wifi-list" class="hidden"></ul>
+
+            <div id="connect-form" class="input-group">
+                <h3 id="selected-ssid" style="margin-bottom: 10px; color: var(--accent-color);"></h3>
+                <input type="password" id="password" placeholder="Enter WiFi Password">
+                <div style="margin-top: 10px;">
+                    <button id="connect-btn" onclick="connectWifi()">Connect</button>
+                </div>
+            </div>
+
+            <div id="status-msg"></div>
+
+            <div id="success-actions" class="hidden" style="margin-top: 20px;">
+                <p style="text-align: center; margin-bottom: 10px;">Connected successfully!</p>
+                <p style="text-align: center; font-size: 0.8em; color: #94a3b8; margin-bottom: 15px;">Please connect
+                    your device to the new WiFi network, then click below.</p>
+                <button onclick="redirectToNewIp()" style="background-color: var(--success-color);">Go to Device
+                    Control</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedSSID = '';
+        let newIP = '';
+        let scanInterval;
+        let connectInterval;
+
+        // Scan on load
+        window.onload = function () {
+            startScan();
+        };
+
+        function startScan() {
+            const list = document.getElementById('wifi-list');
+            const status = document.getElementById('scan-status');
+
+            status.classList.remove('hidden');
+            list.classList.add('hidden');
+
+            // Initial call to trigger scan
+            fetch('/scan')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'scanning') {
+                        // Poll every 1s
+                        scanInterval = setInterval(checkScanResults, 1000);
+                    } else if (data.status === 'done') {
+                        showNetworks(data.networks);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function checkScanResults() {
+            fetch('/scan')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'done') {
+                        clearInterval(scanInterval);
+                        showNetworks(data.networks);
+                    }
+                })
+                .catch(err => {
+                    clearInterval(scanInterval);
+                    document.getElementById('scan-status').innerHTML = '<p style="color: var(--error-color);">Scan failed.</p>';
+                });
+        }
+
+        function showNetworks(networks) {
+            const list = document.getElementById('wifi-list');
+            const status = document.getElementById('scan-status');
+
+            status.classList.add('hidden');
+            list.classList.remove('hidden');
+            list.innerHTML = '';
+
+            networks.forEach(net => {
+                const li = document.createElement('li');
+                li.className = 'wifi-item';
+                li.innerHTML = `<span>${net.ssid}</span> <span style="font-size: 0.8em; opacity: 0.7;">${net.rssi} dBm</span>`;
+                li.onclick = () => selectNetwork(li, net.ssid);
+                list.appendChild(li);
+            });
+        }
+
+        function selectNetwork(element, ssid) {
+            document.querySelectorAll('.wifi-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+
+            selectedSSID = ssid;
+            document.getElementById('selected-ssid').textContent = ssid;
+            document.getElementById('connect-form').classList.add('visible');
+            document.getElementById('password').focus();
+        }
+
+        function connectWifi() {
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('connect-btn');
+            const msg = document.getElementById('status-msg');
+
+            if (!selectedSSID) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Connecting...';
+            msg.textContent = '';
+
+            fetch('/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `ssid=${encodeURIComponent(selectedSSID)}&password=${encodeURIComponent(password)}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Start polling status
+                    connectInterval = setInterval(checkConnectionStatus, 1000);
+                })
+                .catch(err => {
+                    msg.style.color = 'var(--error-color)';
+                    msg.textContent = 'Error sending request.';
+                    btn.disabled = false;
+                    btn.textContent = 'Connect';
+                });
+        }
+
+        function checkConnectionStatus() {
+            const btn = document.getElementById('connect-btn');
+            const msg = document.getElementById('status-msg');
+
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.wifi_status === 3) { // WL_CONNECTED
+                        clearInterval(connectInterval);
+                        msg.style.color = 'var(--success-color)';
+                        msg.textContent = 'Connected! IP: ' + data.ip;
+                        newIP = data.ip;
+                        document.getElementById('connect-form').classList.add('hidden');
+                        document.getElementById('wifi-list').classList.add('hidden');
+                        document.getElementById('success-actions').classList.remove('hidden');
+                    } else if (data.wifi_status === 4) { // WL_CONNECT_FAILED
+                        clearInterval(connectInterval);
+                        msg.style.color = 'var(--error-color)';
+                        msg.textContent = 'Connection failed.';
+                        btn.disabled = false;
+                        btn.textContent = 'Connect';
+                    }
+                    // Other statuses: continue polling
+                });
+        }
+
+        function redirectToNewIp() {
+            if (newIP) {
+                window.location.href = `http://${newIP}/`;
+            }
+        }
+    </script>
+</body>
+
+</html>
